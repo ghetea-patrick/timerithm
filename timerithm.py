@@ -239,15 +239,15 @@ class Time:
         for token, directive in mapping.items():
             formatted = formatted.replace(token, directive)
 
+        if "D" in formatted:
+            formatted = formatted.replace("D", str(self._date.day))
+        if "M" in formatted:
+            formatted = formatted.replace("M", str(self._date.month))
+
         result = self._date.strftime(formatted)
 
         if "p" in layout and "P" not in layout:
             result = result.replace("AM", "am")
             result = result.replace("PM", "pm")
-
-        if "D" in layout:
-            result = result.replace("D", str(self._date.day))
-        if "M" in layout:
-            result = result.replace("M", str(self._date.month))
 
         return result
