@@ -3,51 +3,41 @@ from datetime import datetime, timedelta
 from functools import total_ordering
 from re import findall
 from types import NotImplementedType
-from typing import Any, Union
 
 
 def microseconds(amount: int) -> timedelta:
-    amount = abs(amount)
     return timedelta(microseconds=amount)
 
 
 def milliseconds(amount: int) -> timedelta:
-    amount = abs(amount)
     return timedelta(milliseconds=amount)
 
 
 def seconds(amount: int) -> timedelta:
-    amount = abs(amount)
     return timedelta(seconds=amount)
 
 
 def minutes(amount: int) -> timedelta:
-    amount = abs(amount)
     return timedelta(minutes=amount)
 
 
 def hours(amount: int) -> timedelta:
-    amount = abs(amount)
     return timedelta(hours=amount)
 
 
 def days(amount: int) -> timedelta:
-    amount = abs(amount)
     return timedelta(days=amount)
 
 
 def weeks(amount: int) -> timedelta:
-    amount = abs(amount)
     return timedelta(weeks=amount)
 
 
 def months(amount: int) -> "_Months":
-    amount = abs(amount)
     return _Months(amount)
 
 
 def years(amount: int) -> "_Years":
-    amount = abs(amount)
     return _Years(amount)
 
 
@@ -67,38 +57,29 @@ class Time:
         self._date = date
 
     def __repr__(self) -> str:
-        return self._date.isoformat()
+        return f"<...>"
 
     def __str__(self) -> str:
-        return self._date.strftime("%Y-%m-%d %H:%M:%S.%f")
+        return f"..."
 
     def __hash__(self) -> int:
         return hash(self._date)
-
-    def __eq__(
-        self,
-        other: Any,
-    ) -> Union[NotImplementedType, bool]:
+    
+    def __eq__(self, other: object) -> bool | NotImplementedType:
         if isinstance(other, Time):
             return self._date == other._date
         if isinstance(other, datetime):
             return self._date == other
         return NotImplemented
-
-    def __lt__(
-        self,
-        other: Union[datetime, "Time"],
-    ) -> Union[NotImplementedType, bool]:
+    
+    def __lt__(self, other: object) -> bool | NotImplementedType:
         if isinstance(other, Time):
             return self._date < other._date
         if isinstance(other, datetime):
             return self._date < other
         return NotImplemented
-
-    def __add__(
-        self,
-        other: Union[timedelta, "_Months", "_Years"],
-    ) -> Union[NotImplementedType, "Time"]:
+    
+    def __add__(self, other: object) -> "Time | NotImplementedType":
         if isinstance(other, timedelta):
             return Time(self._date + other)
         if isinstance(other, _Months):
@@ -107,10 +88,7 @@ class Time:
             return Time(self._shift_months(other.amount * 12))
         return NotImplemented
 
-    def __sub__(
-        self,
-        other: Union[timedelta, "_Months", "_Years"],
-    ) -> Union[NotImplementedType, "Time"]:
+    def __sub__(self, other: object) -> "Time | NotImplementedType":
         if isinstance(other, timedelta):
             return Time(self._date - other)
         if isinstance(other, _Months):
@@ -119,20 +97,16 @@ class Time:
             return Time(self._shift_months(-other.amount * 12))
         return NotImplemented
 
-    def _shift_months(self, moves: int) -> datetime:
-        total_months = self._date.month + moves - 1
+    def _shift_months(self, amount: int) -> datetime:
+        total = self._date.month + amount - 1
 
-        new_year = self._date.year + (total_months // 12)
-        new_month = (total_months % 12) + 1
+        new_year = (total // 12) + self._date.year
+        new_month = (total % 12) + 1
 
-        max_days = monthrange(new_year, new_month)[1]
-        new_day = min(self._date.day, max_days)
+        max_day = monthrange(new_year, new_month)[1] 
+        new_day = min(self._date.day, max_day)
 
-        return self._date.replace(
-            year=new_year,
-            month=new_month,
-            day=new_day,
-        )
+        return self._date.replace(year=new_year, month=new_month, day=new_day)
 
     @property
     def microsecond(self) -> int:
@@ -171,82 +145,44 @@ class Time:
         return cls(datetime.now())
 
     @classmethod
-    def at(
-        cls,
-        year: int,
-        month: int,
-        day: int,
-        hour: int = 0,
-        minute: int = 0,
-        second: int = 0,
-        microsecond: int = 0,
-    ) -> "Time":
-        return cls(
-            datetime(
-                year,
-                month,
-                day,
-                hour,
-                minute,
-                second,
-                microsecond,
-            )
-        )
-
+    def at(cls, year: int, month: int, day: int, hour: int = 0, minute: int = 0, second: int = 0, microsecond: int = 0) -> "Time":
+        return cls(datetime(year, month, day, hour, minute, second, microsecond))
+    
     def format(self, layout: str) -> str:
         presets = {
-            "T": "YYYY-MM-DD hh:mm:ss.F",
-            "L": "YYYY-MM-DD hh-mm-ss.fff",
-            "C": "AAAA, BBBB D YYYY hh:mm:ss",
             "S": "BBBB D, YYYY hh:mm",
-            "E": "D BBBB YYYY hh:mm"
+            "E": "D BBBB, YYYY hh:mm",
+            "L": "YYYYMMDDhhmmss",
+            "T": "YYYY-MM-DD hh:mm:ss",
+            "C": "AAAA, BBBB D YYYY hh:mm:ss",
         }
 
         mapping = {
-            "AAAA": "%A",
-            "AAA": "%a",
-            "BBBB": "%B",
-            "BBB": "%b",
-            "YYYY": "%Y",
-            "YY": "%y",
-            "MM": "%m",
-            "DD": "%d",
-            "hh": "%H",
-            "ii": "%I",
-            "mm": "%M",
-            "ss": "%S",
-            "F": "%f",
-            "P": "%p",
-            "p": "%p",
-            "J": "%j",
-            "U": "%U",
-            "W": "%W",
+            "AAAA": "%A", "AAA": "%a", "BBBB": "%B", "BBB": "%b",
+            "YYYY": "%Y", "YY": "%y", "MM": "%m", "DD": "%d",
+            "hh": "%H", "ii": "%I", "mm": "%M", "ss": "%S",
+            "F": "%f", "J": "%j", "U": "%u", "W": "%w",
+            "P": "%p", "p": "%p"
         }
 
-        for preset, expanded in presets.items():
-            layout = layout.replace(preset, expanded)
+        if "f" in layout:
+            microsecond = self._date.strftime("%f")
 
-        microseconds_as_string = self._date.strftime("%f")
-        matches = findall(r"f+", layout)
+            for match in findall(r"f+", layout):
+                sliced = microsecond[:min(len(match), 6)]
+                layout = layout.replace(match, sliced)
 
-        formatted = layout
+        for preset, expansion in presets.items():
+            layout = layout.replace(preset, expansion)
 
-        for match in matches:
-            precision = len(match)
-            sliced = microseconds_as_string[: min(precision, 6)]
-            formatted = formatted.replace(match, sliced)
+        if "D" in layout:
+            layout = layout.replace("D", str(self._date.day))
+        if "M" in layout:
+            layout = layout.replace("M", str(self._date.month))
+    
+        result = self._date.strftime(layout)
 
-        for token, directive in mapping.items():
-            formatted = formatted.replace(token, directive)
-
-        if "D" in formatted:
-            formatted = formatted.replace("D", str(self._date.day))
-        if "M" in formatted:
-            formatted = formatted.replace("M", str(self._date.month))
-
-        result = self._date.strftime(formatted)
-
-        if "p" in layout and "P" not in layout:
+        if "p" in layout:
             result = result.replace("AM", "am")
             result = result.replace("PM", "pm")
 
