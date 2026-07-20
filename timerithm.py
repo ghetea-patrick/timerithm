@@ -57,10 +57,10 @@ class Time:
         self._date = date
 
     def __repr__(self) -> str:
-        return f"<...>"
+        return f"<not implemented>"
 
     def __str__(self) -> str:
-        return f"..."
+        return f"not implemented"
 
     def __hash__(self) -> int:
         return hash(self._date)
