@@ -1,35 +1,30 @@
 # Timerithm
 
-### A Python time utility with slightly fewer calendar-related inconveniences.
+**Readable durations. Sensible month shifts. February still gets special treatment.**
 
-Welcome to **Timerithm**, a lightweight Python utility for working with dates, times, durations, and calendar-aware arithmetic.
+Timerithm is a lightweight Python utility for dates, times, durations, and calendar-aware arithmetic. It builds on Python's standard `datetime` and `timedelta` functionality, adding readable duration helpers, a `Time` wrapper, and custom formatting tokens.
 
-Timerithm is built on top of Python's standard `datetime` and `timedelta` modules while providing a simpler and more expressive interface for common time operations.
+You can write `hours(3)` instead of `timedelta(hours=3)`, move a date forward by a calendar month, and inspect the result without repeating `datetime.timedelta(...)` boilerplate. The calendar remains complicated; your code can at least be polite about it.
 
-Timerithm provides several conveniences:
+[What it does](#what-it-does) · [Get started](#get-started) · [A quick example](#a-quick-example) · [How it fits together](#how-it-fits-together) · [Reference](#reference) · [Examples](#examples) · [Good to know](#good-to-know) · [Design notes](#design-notes) · [License](#license)
 
-- **Readable duration constructors** for microseconds, milliseconds, seconds, minutes, hours, days, and weeks.
-- **Calendar-aware month and year arithmetic** through `months()` and `years()`.
-- **Automatic month-end correction** when shifting dates into shorter months.
-- **Comparable `Time` objects** supporting equality and chronological comparisons.
-- **Simple date construction** through `Time.at()`.
-- **Current-time construction** through `Time.now()`.
-- **Direct date and time component access** through properties.
-- **Custom formatting syntax** with predefined layouts and readable formatting tokens.
+## What it does
 
-Timerithm intentionally keeps its implementation small while making common date and time operations easier to express.
+- Creates fixed durations in microseconds, milliseconds, seconds, minutes, hours, days, and weeks.
+- Adds or subtracts calendar months and years with `months()` and `years()`.
+- Corrects the day automatically when the destination month is shorter, including leap-year handling.
+- Creates explicit dates with `Time.at()` and the current local date and time with `Time.now()`.
+- Supports equality and chronological comparisons, including comparisons with Python `datetime` objects.
+- Exposes individual date and time components through read-only properties.
+- Makes `Time` values usable in sets and dictionary keys through datetime-based hashing.
+- Formats dates using preset layouts, readable tokens, fractional seconds, weekday and month names, and 12-hour or 24-hour clocks.
 
-It is designed for programmers who want to work with time without repeatedly typing `datetime.timedelta(...)`.
+## Get started
 
-Because apparently writing `hours(3)` was easier than writing `timedelta(hours=3)`.
+> [!NOTE]
+> Timerithm uses only Python's standard library and works with standard `datetime` objects and `timedelta` values. Replace `timerithm` with your installation's module path if needed.
 
----
-
-## 1. Installation
-
-Timerithm uses Python's standard library and does not require external dependencies.
-
-Import the required functions and classes from the Timerithm module.
+Import the class and whichever duration helpers you need:
 
 ```python
 from timerithm import (
@@ -46,148 +41,64 @@ from timerithm import (
 )
 ```
 
-Replace `timerithm` with the module path used by your installation.
+The main date/time interface is `Time`. Each instance wraps a Python `datetime`, which supplies the underlying values for arithmetic, comparison, component access, and formatting.
 
-Timerithm is designed to work with standard Python `datetime` objects and `timedelta` values.
+## A quick example
 
----
-
-## 2. Duration Constructors
-
-Timerithm provides helper functions for creating common time durations.
-
-### 2.1 Fixed Durations
-
-| Function | Description | Underlying Type |
-|---|---|---|
-| `microseconds(n)` | Create a duration measured in microseconds. | `timedelta` |
-| `milliseconds(n)` | Create a duration measured in milliseconds. | `timedelta` |
-| `seconds(n)` | Create a duration measured in seconds. | `timedelta` |
-| `minutes(n)` | Create a duration measured in minutes. | `timedelta` |
-| `hours(n)` | Create a duration measured in hours. | `timedelta` |
-| `days(n)` | Create a duration measured in days. | `timedelta` |
-| `weeks(n)` | Create a duration measured in weeks. | `timedelta` |
-
-Each function accepts an integer amount.
-
-Example:
+Move from January 31 to the end of February, add seven days, and format the result:
 
 ```python
-seconds(30)
-minutes(5)
-hours(2)
-days(7)
-weeks(3)
+from timerithm import Time, months, days
+
+date = Time.at(2026, 1, 31)
+
+future = date + months(1) + days(7)
+
+print(future.format("C"))
 ```
 
-These functions return standard Python `timedelta` objects.
-
-They can therefore be used directly with `Time` instances.
-
-```python
-now = Time.now()
-
-later = now + hours(2)
-earlier = now - days(3)
-```
-
-Fixed-duration arithmetic follows the behavior of Python's `timedelta`.
-
----
-
-## 3. Calendar Durations
-
-Timerithm provides separate duration types for months and years.
-
-Unlike seconds or days, months and years do not have a fixed duration.
-
-### 3.1 Months
-
-The `months()` function creates a calendar-month duration.
-
-```python
-months(3)
-```
-
-The resulting object can be added to or subtracted from a `Time` instance.
-
-```python
-date = Time.at(2026, 1, 15)
-
-result = date + months(3)
-```
-
-The resulting date is:
+Output:
 
 ```text
-2026-04-15
+Saturday, March 7 2026 00:00:00
 ```
 
-### 3.2 Years
+The month shift lands on February 28, 2026, because February has no 31st. Adding seven days then reaches March 7.
 
-The `years()` function creates a calendar-year duration.
+> [!IMPORTANT]
+> Use **`.format(layout)`** for readable date output. The current `__str__()` and `__repr__()` methods are placeholders, so printing a `Time` object directly does not display its underlying date.
 
-```python
-years(2)
-```
+## How it fits together
 
-Year arithmetic is internally implemented as twelve-month arithmetic.
+### Wrap a datetime value
 
-```python
-date = Time.at(2026, 1, 15)
-
-result = date + years(2)
-```
-
-The resulting date is:
-
-```text
-2028-01-15
-```
-
-Calendar durations are represented internally by `_Months` and `_Years`.
-
-These classes are implementation details and are not intended to be instantiated directly.
-
----
-
-## 4. Time Class
-
-The `Time` class provides the primary interface for working with dates and times in Timerithm.
-
-Each `Time` instance wraps a Python `datetime` object.
+The `Time(date)` constructor takes the underlying datetime value. Most examples use the convenience constructors, such as:
 
 ```python
 date = Time.at(2026, 10, 1)
 ```
 
-The underlying `datetime` object is stored internally and is used for arithmetic, comparison, formatting, and component access.
+The wrapped datetime remains stored internally, rather than requiring Timerithm to implement another date and time system from scratch.
 
----
+### Get the current local time
 
-## 5. Creating Time Objects
-
-Timerithm provides two class methods for constructing `Time` instances.
-
-### 5.1 Current Time
-
-Use `Time.now()` to create a `Time` instance representing the current local date and time.
+Use `Time.now()` to capture the current local date and time:
 
 ```python
 current = Time.now()
 ```
 
-Internally, this uses:
+Internally, it uses:
 
 ```python
 datetime.now()
 ```
 
-The returned value contains the current year, month, day, hour, minute, second, and microsecond.
+The result includes the year, month, day, hour, minute, second, and microsecond. Timerithm does not add timezone management to this constructor.
 
-### 5.2 Explicit Date and Time
+### Construct an explicit date and time
 
-Use `Time.at()` to construct a specific date and time.
+For a date at midnight:
 
 ```python
 date = Time.at(2026, 10, 1)
@@ -207,7 +118,7 @@ Time.at(
 )
 ```
 
-For example:
+The time components default to zero. Supply them when you need a particular clock time or microsecond value:
 
 ```python
 date = Time.at(
@@ -221,23 +132,89 @@ date = Time.at(
 )
 ```
 
-This creates a `Time` object representing:
+This represents:
 
 ```text
 2026-10-01 14:30:45.123456
 ```
 
-Date validation is handled by Python's `datetime` constructor.
+Python's `datetime` constructor handles validation. Invalid dates therefore raise the same exceptions as the underlying datetime constructor.
 
-Invalid dates therefore raise the same exceptions produced by `datetime`.
+### Use fixed durations for fixed amounts of time
 
----
+The helpers from `microseconds()` through `weeks()` return ordinary `timedelta` values and accept an integer amount:
 
-## 6. Time Arithmetic
+```python
+seconds(30)
+minutes(5)
+hours(2)
+days(7)
+weeks(3)
+```
 
-Timerithm overloads the `+` and `-` operators to support intuitive time calculations.
+Use those values directly with a `Time` instance:
 
-### 6.1 Adding Fixed Durations
+```python
+now = Time.now()
+
+later = now + hours(2)
+earlier = now - days(3)
+```
+
+The first operation moves two hours forward; the second moves three days backward. Fixed-duration arithmetic follows Python's `timedelta` behavior.
+
+### Use calendar durations for months and years
+
+Months and years have separate duration types because they do not have a fixed number of days.
+
+Create a three-month calendar duration:
+
+```python
+months(3)
+```
+
+Add it to a date:
+
+```python
+date = Time.at(2026, 1, 15)
+
+result = date + months(3)
+```
+
+Resulting date:
+
+```text
+2026-04-15
+```
+
+Create a two-year calendar duration:
+
+```python
+years(2)
+```
+
+Add it in the same way:
+
+```python
+date = Time.at(2026, 1, 15)
+
+result = date + years(2)
+```
+
+Resulting date:
+
+```text
+2028-01-15
+```
+
+Internally, calendar durations are represented by `_Months` and `_Years`. These are implementation details; use `months()` and `years()` rather than instantiating those classes directly. Year arithmetic is implemented as twelve-month shifts.
+
+> [!TIP]
+> Choose `days(n)` for a fixed day count and `months(n)` for a calendar-month shift. Timerithm keeps those concepts separate instead of pretending every month has the same length.
+
+### Add and subtract without modifying the original
+
+Fixed durations work with `+`:
 
 ```python
 date = Time.at(2026, 10, 1)
@@ -248,11 +225,7 @@ date + hours(2)
 date + days(7)
 ```
 
-Each operation returns a new `Time` object.
-
-The original object is not modified.
-
-For example:
+Each operation returns a new `Time`; it does not modify the original. For example:
 
 ```python
 date = Time.at(2026, 10, 1)
@@ -260,16 +233,14 @@ date = Time.at(2026, 10, 1)
 future = date + days(5)
 ```
 
-The values are:
+The underlying dates are:
 
 ```text
 date = 2026-10-01
 future = 2026-10-06
 ```
 
-### 6.2 Subtracting Fixed Durations
-
-Fixed durations can also be subtracted.
+Fixed durations also work with `-`:
 
 ```python
 date = Time.at(2026, 10, 10)
@@ -277,23 +248,17 @@ date = Time.at(2026, 10, 10)
 previous = date - days(5)
 ```
 
-The resulting date is:
+Resulting date:
 
 ```text
 2026-10-05
 ```
 
-Timerithm delegates fixed-duration arithmetic to Python's `timedelta`.
+Both directions delegate the fixed-duration calculation to Python's datetime/timedelta behavior.
 
----
+### Shift months across the calendar
 
-## 7. Calendar-Aware Month Arithmetic
-
-Month arithmetic is handled separately from `timedelta` arithmetic.
-
-This is necessary because months do not contain a fixed number of days.
-
-### 7.1 Adding Months
+Adding two months keeps the day when the destination supports it:
 
 ```python
 date = Time.at(2026, 1, 15)
@@ -307,7 +272,7 @@ Result:
 2026-03-15
 ```
 
-Month arithmetic correctly handles changes in year.
+Month shifts also cross year boundaries:
 
 ```python
 date = Time.at(2026, 11, 15)
@@ -321,9 +286,7 @@ Result:
 2027-02-15
 ```
 
-### 7.2 Subtracting Months
-
-Months can also be subtracted.
+Subtract months with the same operator pattern:
 
 ```python
 date = Time.at(2026, 5, 15)
@@ -337,11 +300,9 @@ Result:
 2026-03-15
 ```
 
-### 7.3 Month-End Correction
+### Let shorter months correct the day
 
-When shifting a date into a month that does not contain the original day, Timerithm automatically uses the last valid day of the destination month.
-
-For example:
+When a destination month does not contain the original day, Timerithm selects that month's last valid day:
 
 ```python
 date = Time.at(2026, 1, 31)
@@ -349,15 +310,13 @@ date = Time.at(2026, 1, 31)
 result = date + months(1)
 ```
 
-February does not contain a 31st day.
-
-Timerithm therefore produces:
+Result:
 
 ```text
 2026-02-28
 ```
 
-Leap years are handled through Python's `calendar.monthrange()`.
+Leap years are handled through Python's `calendar.monthrange()`:
 
 ```python
 date = Time.at(2024, 1, 31)
@@ -371,7 +330,7 @@ Result:
 2024-02-29
 ```
 
-The time components are preserved during month arithmetic.
+The time components are preserved during the shift:
 
 ```python
 date = Time.at(2026, 1, 31, 14, 30, 45)
@@ -385,19 +344,11 @@ Result:
 2026-02-28 14:30:45
 ```
 
-The calendar may change the day.
+The calendar may adjust the day. It does not get to rearrange the clock as well.
 
-It does not get to mess with the clock.
+### Shift years using twelve-month arithmetic
 
----
-
-## 8. Year Arithmetic
-
-Year arithmetic is implemented using month arithmetic.
-
-One year corresponds to twelve calendar months.
-
-### Adding Years
+Add years:
 
 ```python
 date = Time.at(2026, 10, 1)
@@ -411,7 +362,7 @@ Result:
 2028-10-01
 ```
 
-### Subtracting Years
+Subtract years:
 
 ```python
 date = Time.at(2028, 10, 1)
@@ -425,9 +376,7 @@ Result:
 2026-10-01
 ```
 
-Year calculations also inherit the month-end handling behavior of `_shift_months()`.
-
-For example:
+Year calculations use the same month-end correction implemented by `_shift_months()`. That includes moving away from February 29:
 
 ```python
 date = Time.at(2024, 2, 29)
@@ -435,23 +384,40 @@ date = Time.at(2024, 2, 29)
 result = date + years(1)
 ```
 
-The destination year does not contain February 29.
-
-Timerithm therefore adjusts the result to the final valid day:
+The destination year is not a leap year, so the result is:
 
 ```text
 2025-02-28
 ```
 
----
+## Reference
 
-## 9. Time Comparison
+### Fixed-duration constructors
 
-`Time` objects support equality and chronological comparisons.
+All seven helpers below take an integer amount and return a standard Python `timedelta`:
 
-The class uses Python's `@total_ordering` decorator to provide the complete set of ordering operations from `__eq__()` and `__lt__()`.
+| Function | Description | Underlying Type |
+|---|---|---|
+| `microseconds(n)` | Create a duration measured in microseconds. | `timedelta` |
+| `milliseconds(n)` | Create a duration measured in milliseconds. | `timedelta` |
+| `seconds(n)` | Create a duration measured in seconds. | `timedelta` |
+| `minutes(n)` | Create a duration measured in minutes. | `timedelta` |
+| `hours(n)` | Create a duration measured in hours. | `timedelta` |
+| `days(n)` | Create a duration measured in days. | `timedelta` |
+| `weeks(n)` | Create a duration measured in weeks. | `timedelta` |
 
-### Supported Comparisons
+### Calendar-duration constructors
+
+| Helper | Meaning | Internal representation |
+| --- | --- | --- |
+| `months(n)` | Shift by `n` calendar months. | `_Months` |
+| `years(n)` | Shift by `n` calendar years, implemented through twelve-month arithmetic. | `_Years` |
+
+Add or subtract these from `Time` values with `+` and `-`. They are distinct from the fixed-duration `timedelta` helpers.
+
+### Comparisons
+
+`Time` supports equality and chronological ordering:
 
 | Operator | Description |
 |---|---|
@@ -462,7 +428,7 @@ The class uses Python's `@total_ordering` decorator to provide the complete set 
 | `>` | Later than |
 | `>=` | Later than or equal to |
 
-### Example
+For example:
 
 ```python
 first = Time.at(2026, 1, 1)
@@ -481,9 +447,9 @@ False
 True
 ```
 
-### Comparing with `datetime`
+The class uses `@total_ordering` to derive the full ordering interface from `__eq__()` and `__lt__()`.
 
-`Time` objects can also be compared directly with Python `datetime` objects.
+You can also compare a `Time` directly with a Python `datetime`:
 
 ```python
 from datetime import datetime
@@ -500,19 +466,11 @@ Output:
 True
 ```
 
-The comparison is performed against the underlying `_date` value.
+Comparisons use the underlying `_date` value. For unsupported comparison types, the methods return `NotImplemented`, allowing Python to apply its normal comparison rules.
 
-Unsupported comparison types return `NotImplemented`, allowing Python to handle the operation according to its normal comparison rules.
+### Hashing
 
----
-
-## 10. Hashing
-
-`Time` implements `__hash__()` using the wrapped `datetime`.
-
-This allows `Time` instances to be used in hash-based collections such as sets and dictionaries.
-
-Example:
+`Time.__hash__()` uses the wrapped datetime, so you can store instances in sets or use them as dictionary keys:
 
 ```python
 date = Time.at(2026, 1, 1)
@@ -528,15 +486,9 @@ Output:
 True
 ```
 
-Two `Time` instances representing the same underlying `datetime` produce equivalent hash behavior.
+Two `Time` values wrapping the same datetime have equivalent hash behavior. Time can now be a dictionary key; presumably it has always wanted more responsibilities.
 
-Because time apparently needed to become hashable too.
-
----
-
-## 11. Date and Time Properties
-
-Timerithm exposes individual components of the underlying datetime through read-only properties.
+### Read-only date and time components
 
 | Property | Description |
 |---|---|
@@ -549,7 +501,7 @@ Timerithm exposes individual components of the underlying datetime through read-
 | `month` | Month number. |
 | `year` | Year number. |
 
-### Example
+For a value with every component specified:
 
 ```python
 date = Time.at(
@@ -587,15 +539,13 @@ Output:
 123456
 ```
 
-### Milliseconds
-
-The `millisecond` property is derived from the underlying microsecond value:
+The `millisecond` property is derived from the microsecond value with integer division:
 
 ```python
 self._date.microsecond // 1000
 ```
 
-Therefore:
+So this value:
 
 ```text
 123456 microseconds
@@ -607,29 +557,19 @@ becomes:
 123 milliseconds
 ```
 
-The remaining fractional precision is discarded.
+The remaining fractional precision is discarded; the property does not round it.
 
----
+### Formatting interface
 
-## 12. Formatting
-
-Timerithm provides custom date and time formatting through the `format()` method.
+Call:
 
 ```python
 date.format(layout)
 ```
 
-The formatter supports:
+The formatter accepts preset layouts and custom tokens. It supports fractional seconds, weekday and month names, 12-hour and 24-hour clocks, and uppercase or lowercase AM/PM.
 
-- Predefined layouts.
-- Custom formatting tokens.
-- Fractional seconds.
-- 12-hour and 24-hour clocks.
-- Weekday names.
-- Month names.
-- AM/PM formatting.
-
-Example:
+For example:
 
 ```python
 date = Time.at(2026, 10, 1, 14, 30, 45)
@@ -643,11 +583,9 @@ Output:
 2026-10-01 14:30:45
 ```
 
----
+### Preset layouts
 
-## 13. Predefined Formatting Layouts
-
-Timerithm provides several predefined layout shortcuts.
+Each preset expands to the layout shown below before the final `strftime()` operation:
 
 | Preset | Expansion | Example |
 |---|---|---|
@@ -657,7 +595,7 @@ Timerithm provides several predefined layout shortcuts.
 | `T` | `YYYY-MM-DD hh:mm:ss` | 2026-10-01 14:30:45 |
 | `C` | `AAAA, BBBB D YYYY hh:mm:ss` | Thursday, October 1 2026 14:30:45 |
 
-### Example
+Use the one-character preset as the entire layout:
 
 ```python
 date = Time.at(2026, 10, 1, 14, 30, 45)
@@ -669,13 +607,11 @@ print(date.format("T"))
 print(date.format("C"))
 ```
 
-The preset is expanded before the final `strftime()` operation.
+The table shows the resulting strings for the sample date of October 1, 2026, at 14:30:45.
 
----
+### Formatting tokens
 
-## 14. Formatting Tokens
-
-Timerithm supports readable formatting tokens that are converted into Python `strftime` directives.
+Timerithm converts these readable tokens into Python `strftime` directives:
 
 | Token | Description |
 |---|---|
@@ -698,7 +634,7 @@ Timerithm supports readable formatting tokens that are converted into Python `st
 | `P` | AM/PM |
 | `p` | Lowercase AM/PM |
 
-### Example
+For a weekday and month name:
 
 ```python
 date = Time.at(2026, 10, 1, 14, 30, 45)
@@ -712,7 +648,7 @@ Example output:
 Thursday, October 1 2026
 ```
 
-Another example:
+For a 12-hour clock and lowercase AM/PM:
 
 ```python
 print(date.format("ii:mm p"))
@@ -724,17 +660,9 @@ Output:
 02:30 pm
 ```
 
----
+### Padded and unpadded dates
 
-## 15. Unpadded Day and Month
-
-Timerithm provides special handling for `D` and `M`.
-
-The `D` token represents the numerical day of the month without zero-padding.
-
-The `M` token represents the numerical month without zero-padding.
-
-For example:
+`D` is the numerical day without zero-padding; `M` is the numerical month without zero-padding. They receive special handling separately from the padded `DD` and `MM` tokens.
 
 ```python
 date = Time.at(2026, 3, 5)
@@ -748,27 +676,23 @@ Output:
 3/5/2026
 ```
 
-This differs from:
+Using the padded tokens instead:
 
 ```python
 date.format("MM/DD/YYYY")
 ```
 
-which produces:
+produces:
 
 ```text
 03/05/2026
 ```
 
-This distinction allows both padded and unpadded calendar representations.
+Choose the form that matches the representation you need.
 
----
+### Fractional seconds
 
-## 16. Fractional Seconds
-
-Timerithm supports repeated `f` characters for formatting fractional seconds.
-
-The number of `f` characters determines how many digits of the microsecond component are included.
+Repeat lowercase `f` to select how many digits of the microsecond component to include. Using this date:
 
 ```python
 date = Time.at(
@@ -782,7 +706,7 @@ date = Time.at(
 )
 ```
 
-### Examples
+One `f`:
 
 ```python
 date.format("hh:mm:ss.f")
@@ -794,6 +718,8 @@ Output:
 14:30:45.1
 ```
 
+Three `f` characters:
+
 ```python
 date.format("hh:mm:ss.fff")
 ```
@@ -803,6 +729,8 @@ Output:
 ```text
 14:30:45.123
 ```
+
+Six `f` characters:
 
 ```python
 date.format("hh:mm:ss.ffffff")
@@ -814,33 +742,26 @@ Output:
 14:30:45.123456
 ```
 
-Timerithm truncates the microsecond string to the requested number of digits.
+> [!IMPORTANT]
+> Fractional-second formatting **truncates** the microsecond string to the requested digit count. The maximum meaningful precision is six digits because Python's `datetime` stores microseconds.
 
-The maximum meaningful precision is six digits because Python's `datetime` stores microseconds.
+The uppercase `F` token in the token table represents microseconds; repeated lowercase `f` characters let you choose the displayed fractional precision.
 
----
+### AM/PM case
 
-## 17. AM/PM Formatting
-
-The formatter supports both uppercase and lowercase AM/PM output.
-
-Using:
+For standard uppercase `AM` or `PM`, use:
 
 ```text
 P
 ```
 
-produces the standard `AM` or `PM` representation.
-
-Using:
+For lowercase `am` or `pm`, use:
 
 ```text
 p
 ```
 
-produces lowercase `am` or `pm`.
-
-Example:
+For example:
 
 ```python
 date = Time.at(2026, 10, 1, 14, 30)
@@ -856,13 +777,93 @@ Output:
 02:30 pm
 ```
 
-The lowercase form is implemented by replacing `AM` and `PM` after `strftime()` formatting.
+The lowercase form is implemented by replacing `AM` and `PM` after `strftime()` formats the value.
 
----
+### API at a glance
 
-## 18. Complete Example
+#### Duration Functions
 
-The following example demonstrates the primary features of Timerithm.
+```python
+microseconds(amount)
+milliseconds(amount)
+seconds(amount)
+minutes(amount)
+hours(amount)
+days(amount)
+weeks(amount)
+months(amount)
+years(amount)
+```
+
+#### `Time` Class
+
+```python
+Time(date)
+```
+
+#### Class Methods
+
+```python
+Time.now()
+Time.at(
+    year,
+    month,
+    day,
+    hour=0,
+    minute=0,
+    second=0,
+    microsecond=0
+)
+```
+
+#### Arithmetic
+
+```python
+time + timedelta
+time - timedelta
+
+time + months(n)
+time - months(n)
+
+time + years(n)
+time - years(n)
+```
+
+#### Comparison
+
+```python
+time == other
+time != other
+time < other
+time <= other
+time > other
+time >= other
+```
+
+#### Properties
+
+```python
+time.microsecond
+time.millisecond
+time.second
+time.minute
+time.hour
+time.day
+time.month
+time.year
+```
+
+#### Formatting
+
+```python
+time.format(layout)
+```
+
+## Examples
+
+### Work from construction through formatting
+
+This combines fixed durations, calendar durations, comparisons, component access, formatting, and automatic leap-year handling:
 
 ```python
 from timerithm import (
@@ -912,7 +913,7 @@ print(next_month.format("YYYY-MM-DD"))
 print(next_year.format("S"))
 ```
 
-### Expected Output
+Expected output:
 
 ```text
 True
@@ -925,191 +926,49 @@ Wednesday, January 31 2024 12:30:45
 January 31, 2025 12:30
 ```
 
-The example demonstrates:
+The starting date is January 31, 2024. The five-hour shift keeps the same calendar date, the month shift adjusts to February 29, and the year shift reaches January 31, 2025. `next_week` also demonstrates adding seven fixed days, even though it is not printed.
 
-1. Explicit time construction.
-2. Fixed-duration arithmetic.
-3. Calendar-aware month arithmetic.
-4. Calendar-aware year arithmetic.
-5. Date comparison.
-6. Component inspection.
-7. Custom formatting.
-8. Automatic leap-year handling.
+The full workflow is: construct a value, calculate new values with duration helpers, compare or inspect the results, and use `.format()` when you want text output.
 
----
+## Good to know
 
-## 19. Design Philosophy
+Timerithm remains a small wrapper around Python's date and time facilities. The current implementation does not provide:
 
-Timerithm is designed as a lightweight abstraction over Python's existing date and time functionality.
-
-Rather than replacing `datetime`, it builds on top of it.
-
-The library separates fixed durations from calendar durations:
-
-- `timedelta` handles microseconds through weeks.
-- `_Months` handles calendar-month arithmetic.
-- `_Years` represents calendar years through twelve-month shifts.
-
-This distinction allows Timerithm to provide intuitive month and year arithmetic without pretending that every month contains the same number of days.
-
-The `Time` class keeps the underlying `datetime` available internally while providing:
-
-- Simple construction.
-- Operator-based arithmetic.
-- Direct comparison.
-- Component properties.
-- Custom formatting.
-
-Timerithm is intentionally compact and relies heavily on Python's standard library rather than implementing another independent date/time system.
-
-The goal is not to reinvent time.
-
-Time has already done enough damage.
-
----
-
-## 20. API Summary
-
-### Duration Functions
-
-```python
-microseconds(amount)
-milliseconds(amount)
-seconds(amount)
-minutes(amount)
-hours(amount)
-days(amount)
-weeks(amount)
-months(amount)
-years(amount)
-```
-
-### `Time` Class
-
-```python
-Time(date)
-```
-
-### Class Methods
-
-```python
-Time.now()
-Time.at(
-    year,
-    month,
-    day,
-    hour=0,
-    minute=0,
-    second=0,
-    microsecond=0
-)
-```
-
-### Arithmetic
-
-```python
-time + timedelta
-time - timedelta
-
-time + months(n)
-time - months(n)
-
-time + years(n)
-time - years(n)
-```
-
-### Comparison
-
-```python
-time == other
-time != other
-time < other
-time <= other
-time > other
-time >= other
-```
-
-### Properties
-
-```python
-time.microsecond
-time.millisecond
-time.second
-time.minute
-time.hour
-time.day
-time.month
-time.year
-```
-
-### Formatting
-
-```python
-time.format(layout)
-```
-
----
-
-## 21. Limitations
-
-Timerithm intentionally remains a small wrapper around Python's standard date/time facilities.
-
-The current implementation does not provide:
-
-- Time zone management.
-- Time zone conversion.
+- Timezone management.
+- Timezone conversion.
 - Daylight-saving-time utilities.
 - Relative date parsing.
 - Natural-language date parsing.
 - Duration multiplication or division.
 - Custom locale management.
 - Serialization helpers.
-- A custom `__str__()` or `__repr__()` representation.
+- Custom date representations through `__str__()` or `__repr__()`.
 
-The current `__str__()` and `__repr__()` methods are placeholders and return:
+> [!WARNING]
+> `__str__()` and `__repr__()` are implementation placeholders. They do not expose a formatted date. Use `.format(layout)` for that.
+
+`__str__()` currently returns:
 
 ```text
 not implemented
 ```
 
-and:
+`__repr__()` currently returns:
 
 ```text
 <not implemented>
 ```
 
-respectively.
+Dates and timestamps shown as results throughout this README describe the underlying values, or the explicitly formatted output. They are not promises about `print(time)` producing a date string.
 
-These are implementation placeholders rather than formatted representations of the underlying date.
+## Design notes
 
----
+Timerithm builds on `datetime` rather than replacing it. The `Time` class keeps the wrapped value internally and supplies simple construction, operator-based arithmetic, direct comparisons, component properties, and custom formatting.
 
-## 22. License
+Fixed and calendar durations have separate jobs: `timedelta` handles microseconds through weeks, `_Months` handles calendar-month shifts, and `_Years` expresses years through twelve-month shifts. This separation makes month-end behavior explicit instead of assuming every month contains the same number of days.
 
-Timerithm is distributed according to the license included with the project.
+The implementation stays compact and relies on Python's standard library. The goal is to make everyday time calculations easier to express. Time has already caused enough trouble without requiring another independent date system.
 
-See the project's license file for the applicable terms.
+## License
 
----
-
-## 23. Final Example
-
-A compact Timerithm program can therefore look like this:
-
-```python
-from timerithm import Time, months, days
-
-date = Time.at(2026, 1, 31)
-
-future = date + months(1) + days(7)
-
-print(future.format("C"))
-```
-
-Output:
-
-```text
-Saturday, March 7 2026 00:00:00
-```
-
-A small interface for doing the things calendars have spent centuries making unnecessarily complicated.
+Timerithm is distributed under the license included with the project. See the project's license file for the applicable terms.
