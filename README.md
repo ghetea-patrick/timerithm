@@ -968,7 +968,3 @@ Timerithm builds on `datetime` rather than replacing it. The `Time` class keeps 
 Fixed and calendar durations have separate jobs: `timedelta` handles microseconds through weeks, `_Months` handles calendar-month shifts, and `_Years` expresses years through twelve-month shifts. This separation makes month-end behavior explicit instead of assuming every month contains the same number of days.
 
 The implementation stays compact and relies on Python's standard library. The goal is to make everyday time calculations easier to express. Time has already caused enough trouble without requiring another independent date system.
-
-## License
-
-Timerithm is distributed under the license included with the project. See the project's license file for the applicable terms.
